@@ -33,7 +33,7 @@ namespace casa_del_mar.Controllers
         [HttpGet]
         public async Task<ActionResult<List<Room>>> Get()
         {
-            return await db.Rooms.ToListAsync();
+            return Ok(await db.Rooms.ToListAsync());
 
             //return dates;
         }
