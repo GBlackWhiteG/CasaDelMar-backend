@@ -11,6 +11,6 @@ namespace casa_del_mar.Models
         public string? Name { get; set; }
         public string? Description { get; set; }
         public string? PhotoURL { get; set; }
-        public int? Price {  get; set; }
+        public int? Price { get; set; }
     }
 }

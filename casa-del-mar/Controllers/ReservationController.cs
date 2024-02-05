@@ -1,7 +1,9 @@
 ﻿using casa_del_mar.Models;
+using casa_del_mar.Types.Api.Reservation;
 using casa_del_mar.Types.Api.Room;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 
 namespace casa_del_mar.Controllers
@@ -15,69 +17,42 @@ namespace casa_del_mar.Controllers
         public ReservationController(ApplicationContext context)
         {
             db = context;
-
-            if (!db.Rooms.Any())
-            {
-                db.Rooms.Add(new Room {
-                    Name = "Делюкс номер",
-                    Description = "Резиновые утки для серфинга и ночные истории с мраморными ванными комнатами и кроватями с балдахином - даже роскошь иногда требует перерыва для игр.",
-                    PhotoURL = "../../media/rooms/delux.jpg",
-                    Price = 55767,
-                });
-
-                db.SaveChanges();
-            }
-        }
-
-        [Route("list")]
-        [HttpGet]
-        public async Task<ActionResult<List<Room>>> Get()
-        {
-            return Ok(await db.Rooms.ToListAsync());
-
-            //return dates;
         }
 
         [Route("add")]
         [HttpPost]
-        public async Task<ActionResult<Room>> Create(IRoomAddParams room)
+        public async Task<ActionResult<ReservatedDates>> Get(IReservationDatesParams datesParams)
         {
-            if (room == null) return BadRequest("Неверные данные");
+            Room? room = db.Rooms.FirstOrDefault(x => x.ID == datesParams.roomID);
 
-            Room newRoom = new Room();
-            newRoom.Name = room.name;
-            newRoom.Description = room.description;
-            newRoom.PhotoURL = room.photoURL;
-            newRoom.Price = room.price;
+            if (room == null) return BadRequest("Комната не найдена");
+            ReservatedDates dates = new ReservatedDates();
+            try
+            {
+                dates.start = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(datesParams.startTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
+                dates.end = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(datesParams.endTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
+                dates.roomID = datesParams.roomID;
+            }
+            catch
+            {
+                return BadRequest($"Неверный формат даты: {datesParams.startTime}");
+            }
 
-            await db.Rooms.AddAsync(newRoom);
+            db.ReservatedDates.Update(dates);
             await db.SaveChangesAsync();
-            return Ok(newRoom);
-        }
-
-        [Route("update")]
-        [HttpPut]
-        public async Task<ActionResult<Room>> Update(Room room)
-        {
-            if (room == null) return BadRequest("Неверные данные");
-
-            if (!db.Rooms.Any(x => x.ID == room.ID)) return NotFound("Комната не найдена");
-
-            db.Rooms.Update(room);
-            await db.SaveChangesAsync();
-            return Ok(room);
+            return Ok(dates);
         }
 
         [Route("delete")]
         [HttpDelete]
-        public async Task<ActionResult<Room>> Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
-            Room? room = await db.Rooms.FirstOrDefaultAsync(x => x.ID == id);
-            if (room == null) return NotFound("Комната не найдена");
+            ReservatedDates? reservation = await db.ReservatedDates.FirstOrDefaultAsync(x => x.reservationDatesID == id);
+            if (reservation == null) return BadRequest("Бронирование не найдено");
 
-            db.Rooms.Remove(room);
+            db.ReservatedDates.Remove(reservation);
             await db.SaveChangesAsync();
-            return Ok(room);
+            return Ok(reservation);
         }
     }
 }
