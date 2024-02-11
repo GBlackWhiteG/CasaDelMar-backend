@@ -19,6 +19,13 @@ namespace casa_del_mar.Controllers
             db = context;
         }
 
+        [Route("list")]
+        [HttpGet]
+        public async Task<ActionResult<List<ReservatedDates>>> GetAll()
+        {
+            return Ok(await db.ReservatedDates.ToListAsync());
+        }
+
         [Route("add")]
         [HttpPost]
         public async Task<ActionResult<ReservatedDates>> Get(IReservationDatesParams datesParams)
