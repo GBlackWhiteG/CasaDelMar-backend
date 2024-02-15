@@ -19,6 +19,16 @@ namespace casa_del_mar.Controllers
             db = context;
         }
 
+        [Route("get")]
+        [HttpGet]
+        public async Task<ActionResult<ReservatedDates>> Get(int id)
+        {
+            ReservatedDates? order = await db.ReservatedDates.FirstOrDefaultAsync(x => x.reservationDatesID == id);
+            if (order == null) return BadRequest("Заказ не найден");
+
+            return Ok(order);
+        }
+
         [Route("list")]
         [HttpGet]
         public async Task<ActionResult<List<ReservatedDates>>> GetAll()
@@ -28,26 +38,45 @@ namespace casa_del_mar.Controllers
 
         [Route("add")]
         [HttpPost]
-        public async Task<ActionResult<ReservatedDates>> Get(IReservationDatesParams datesParams)
+        public async Task<ActionResult<ReservatedDates>> Get(IReservationDatesParams orderParams)
         {
-            Room? room = db.Rooms.FirstOrDefault(x => x.ID == datesParams.roomID);
+            Room? room = db.Rooms.FirstOrDefault(x => x.ID == orderParams.roomID);
 
             if (room == null) return BadRequest("Комната не найдена");
-            ReservatedDates dates = new ReservatedDates();
+            ReservatedDates order = new ReservatedDates();
             try
             {
-                dates.start = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(datesParams.startTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
-                dates.end = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(datesParams.endTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
-                dates.roomID = datesParams.roomID;
+                order.start = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(orderParams.startTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
+                order.end = TimeZoneInfo.ConvertTimeToUtc(DateTime.ParseExact(orderParams.endTime, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", CultureInfo.InvariantCulture));
             }
             catch
             {
-                return BadRequest($"Неверный формат даты: {datesParams.startTime}");
+                return BadRequest($"Неверный формат даты: {orderParams.startTime}");
             }
 
-            db.ReservatedDates.Update(dates);
+            order.fullName = orderParams.fullName;
+            order.email = orderParams.email;
+            order.phoneNumber = orderParams.phoneNumber;
+            order.adultsCount = orderParams.adultsCount;
+            order.childrenCount = orderParams.childrenCount;
+            order.roomID = orderParams.roomID;
+
+            db.ReservatedDates.Update(order);
             await db.SaveChangesAsync();
-            return Ok(dates);
+            return Ok(order);
+        }
+
+        [Route("update")]
+        [HttpPut]
+        public async Task<ActionResult> Update(ReservatedDates order)
+        {
+            if (order == null) return BadRequest("Неверные данные");
+
+            if (!db.ReservatedDates.Any(x => x.reservationDatesID == order.reservationDatesID)) return BadRequest("Заказ не найден");
+
+            db.ReservatedDates.Update(order);
+            await db.SaveChangesAsync();
+            return Ok(order);
         }
 
         [Route("delete")]
